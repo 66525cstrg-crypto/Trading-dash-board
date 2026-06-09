@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>JM TradeVault Pro</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #080D1A; color: #E2E8F0; font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  #auth-modal { position: fixed; inset: 0; background: rgba(8,13,26,0.95); display: flex; align-items: center; justify-content: center; z: 1000; }
+  #auth-modal.hidden { display: none; }
+  .auth-box { background: #0D1424; border: 1px solid #1E2A45; border-radius: 12px; padding: 32px; max-width: 400px; text-align: center; }
+  .auth-box h2 { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+  .auth-box p { font-size: 13px; color: #64748B; margin-bottom: 20px; line-height: 1.6; }
+  .auth-box input { width: 100%; padding: 10px 12px; background: #111827; border: 1px solid #1E2A45; border-radius: 6px; color: #E2E8F0; font-size: 12px; font-family: monospace; margin-bottom: 16px; }
+  .auth-box button { width: 100%; padding: 10px; background: linear-gradient(135deg,#3B82F6,#8B5CF6); border: none; border-radius: 6px; color: #fff; font-weight: 600; cursor: pointer; font-size: 13px; }
+  .auth-box button:hover { opacity: 0.9; }
+  .auth-note { font-size: 11px; color: #475569; margin-top: 16px; }
+  
+  #ticker-wrap { background: #0A0F1E; border-bottom: 1px solid #1E2A45; padding: 6px 0; overflow: hidden; flex-shrink: 0; }
+  #ticker { display: flex; gap: 40px; padding-left: 20px; white-space: nowrap; animation: scroll 22s linear infinite; }
+  #ticker span { font-size: 11px; letter-spacing: 0.04em; }
+  #ticker .sym { color: #64748B; margin-right: 6px; }
+  #ticker .val { color: #CBD5E1; font-family: monospace; margin-right: 6px; }
+  #ticker .up { color: #10B981; font-weight: 600; }
+  #ticker .dn { color: #F43F5E; font-weight: 600; }
+  @keyframes scroll { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+  #header { display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; background: #0A0F1E; border-bottom: 1px solid #1E2A45; flex-shrink: 0; }
+  #logo { display: flex; align-items: center; gap: 12px; }
+  #logo-icon { width: 28px; height: 28px; border-radius: 6px; background: linear-gradient(135deg,#3B82F6,#8B5CF6); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: #fff; }
+  #logo-name { font-size: 15px; font-weight: 700; color: #F1F5F9; letter-spacing: -0.01em; }
+  #pro-badge { font-size: 9px; font-weight: 600; letter-spacing: 0.08em; color: #3B82F6; border: 1px solid #1E3A5F; border-radius: 3px; padding: 1px 5px; background: #0D1E35; }
+  #live-pill { display: flex; align-items: center; gap: 6px; background: #0F1829; border: 1px solid #1E2A45; border-radius: 6px; padding: 5px 10px; cursor: pointer; }
+  #live-dot { width: 6px; height: 6px; border-radius: 50%; background: #F59E0B; box-shadow: 0 0 6px #F59E0B; }
+  #live-dot.connected { background: #10B981; box-shadow: 0 0 6px #10B981; }
+  #live-pill span { font-size: 11px; color: #94A3B8; }
+  #menu-btn { background: none; border: none; color: #64748B; cursor: pointer; font-size: 18px; padding: 4px; }
+  #body { display: flex; flex: 1; overflow: hidden; }
+  #sidebar { width: 220px; flex-shrink: 0; background: #0A0F1E; border-right: 1px solid #1E2A45; display: flex; flex-direction: column; padding: 16px 0; overflow-y: auto; transition: width 0.2s; }
+  #sidebar.closed { width: 0; padding: 0; overflow: hidden; }
+  .views-label { padding: 0 12px 12px; font-size: 9px; font-weight: 700; letter-spacing: 0.12em; color: #334155; }
+  .nav-btn { display: flex; align-items: center; gap: 10px; padding: 9px 16px; background: transparent; border: none; border-left: 2px solid transparent; cursor: pointer; text-align: left; width: 100%; transition: all 0.15s; }
+  .nav-btn.active { background: #111827; border-left-color: var(--c); }
+  .nav-tag { width: 28px; height: 28px; border-radius: 6px; background: #111827; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; border: 1px solid #1E2A45; color: #475569; }
+  .nav-btn.active .nav-tag { background: color-mix(in srgb, var(--c) 13%, transparent); border-color: color-mix(in srgb, var(--c) 27%, transparent); color: var(--c); }
+  .nav-label { font-size: 12px; color: #64748B; font-weight: 400; }
+  .nav-btn.active .nav-label { color: #F1F5F9; font-weight: 600; }
+  #main { flex: 1; overflow: auto; padding: 20px 24px; }
+  #page-header { margin-bottom: 20px; display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  #page-eyebrow { font-size: 11px; color: #334155; letter-spacing: 0.1em; font-weight: 600; margin-bottom: 4px; }
+  #page-title { font-size: 22px; font-weight: 700; color: #F1F5F9; letter-spacing: -0.02em; }
+  #stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 20px; }
+  .stat-card { background: #0D1424; border: 1px solid #1E2A45; border-radius: 10px; padding: 16px; position: relative; overflow: hidden; }
+  .stat-bar { position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+  .stat-lbl { font-size: 10px; color: #475569; letter-spacing: 0.08em; font-weight: 600; margin-bottom: 8px; }
+  .stat-val { font-size: 22px; font-weight: 700; font-family: monospace; letter-spacing: -0.02em; margin-bottom: 4px; }
+  .stat-sub { font-size: 10px; color: #475569; }
+  #charts-row { display: grid; grid-template-columns: 1fr 220px; gap: 12px; margin-bottom: 20px; }
+  .card { background: #0D1424; border: 1px solid #1E2A45; border-radius: 10px; padding: 16px; }
+  #bar-chart { display: flex; align-items: flex-end; gap: 6px; height: 80px; }
+  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; height: 100%; justify-content: flex-end; }
+  .bar { width: 100%; border-radius: 3px 3px 0 0; }
+  .bar-lbl { font-size: 8px; color: #334155; }
+  #donut-card { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  #donut-wrap { position: relative; width: 90px; height: 90px; }
+  #donut-wrap svg { transform: rotate(-90deg); width: 90px; height: 90px; }
+  #donut-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  #donut-pct { font-size: 18px; font-weight: 700; color: #10B981; line-height: 1; font-family: monospace; }
+  #donut-txt { font-size: 8px; color: #475569; margin-top: 2px; }
+  #wl-row { display: flex; gap: 12px; margin-top: 12px; }
+  .wl-col { text-align: center; }
+  .wl-num { font-size: 13px; font-weight: 700; font-family: monospace; }
+  .wl-lbl { font-size: 8px; color: #475569; }
+  #table-card { background: #0D1424; border: 1px solid #1E2A45; border-radius: 10px; overflow: hidden; margin-bottom: 20px; }
+  #table-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-bottom: 1px solid #1E2A45; }
+  #table-header span:first-child { font-size: 12px; font-weight: 600; color: #94A3B8; }
+  #refresh-btn { font-size: 10px; color: #3B82F6; cursor: pointer; background: none; border: 1px solid #1E3A5F; border-radius: 4px; padding: 3px 8px; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { padding: 8px 16px; text-align: left; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; color: #334155; border-bottom: 1px solid #1E2A45; }
+  tbody tr { border-bottom: 1px solid #111827; }
+  tbody td { padding: 10px 16px; }
+  .t-sym { font-size: 12px; font-weight: 700; color: #E2E8F0; font-family: monospace; }
+  .badge { font-size: 9px; font-weight: 700; letter-spacing: 0.06em; border-radius: 3px; padding: 2px 6px; }
+  .badge-ce { color: #10B981; background: #10B98122; border: 1px solid #10B98144; }
+  .badge-pe { color: #A78BFA; background: #A78BFA22; border: 1px solid #A78BFA44; }
+  .result-win { color: #10B981; font-size: 10px; font-weight: 600; }
+  .result-loss { color: #F43F5E; font-size: 10px; font-weight: 600; }
+  .t-price { font-size: 11px; color: #64748B; font-family: monospace; }
+  .pnl { font-size: 12px; font-weight: 700; font-family: monospace; }
+  .pnl.win { color: #10B981; }
+  .pnl.loss { color: #F43F5E; }
+  #emotion-row { display: grid; grid-template-columns: repeat(5,1fr); gap: 8px; margin-bottom: 20px; }
+  .emotion-card { background: #0D1424; border: 1px solid #1E2A45; border-radius: 8px; padding: 10px; text-align: center; }
+  .emotion-emoji { font-size: 18px; margin-bottom: 4px; }
+  .emotion-lbl { font-size: 9px; color: #64748B; }
+  .emotion-count { font-size: 14px; font-weight: 700; color: #E2E8F0; font-family: monospace; }
+  #loading { display: flex; align-items: center; justify-content: center; padding: 40px; color: #475569; font-size: 13px; gap: 10px; }
+  .spinner { width: 16px; height: 16px; border: 2px solid #1E2A45; border-top-color: #3B82F6; border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .error-msg { background: #1A0A0A; border: 1px solid #F43F5E44; border-radius: 8px; padding: 12px 16px; color: #F43F5E; font-size: 12px; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+
+<!-- AUTH MODAL -->
+<div id="auth-modal">
+  <div class="auth-box">
+    <h2>🔐 Enter Your Notion Token</h2>
+    <p>Your token is stored locally only and never sent elsewhere. It connects to your JM Trading Journal.</p>
+    <input type="password" id="token-input" placeholder="Paste your Notion API token here" />
+    <button onclick="saveToken()">Connect to Notion</button>
+    <div class="auth-note">📌 Your token won't be saved to GitHub — only in your browser.</div>
+  </div>
+</div>
+
+<!-- TICKER -->
+<div id="ticker-wrap">
+  <div id="ticker">
+    <span><span class="sym">NIFTY 50</span><span class="val">24,892.15</span><span class="up">+0.84%</span></span>
+    <span><span class="sym">BANK NIFTY</span><span class="val">51,340.70</span><span class="up">+1.12%</span></span>
+    <span><span class="sym">SENSEX</span><span class="val">81,450.30</span><span class="up">+0.76%</span></span>
+    <span><span class="sym">MIDCAP 150</span><span class="val">18,204.45</span><span class="dn">-0.23%</span></span>
+    <span><span class="sym">VIX</span><span class="val">13.42</span><span class="dn">-4.10%</span></span>
+    <span><span class="sym">NIFTY 50</span><span class="val">24,892.15</span><span class="up">+0.84%</span></span>
+    <span><span class="sym">BANK NIFTY</span><span class="val">51,340.70</span><span class="up">+1.12%</span></span>
+    <span><span class="sym">SENSEX</span><span class="val">81,450.30</span><span class="up">+0.76%</span></span>
+    <span><span class="sym">MIDCAP 150</span><span class="val">18,204.45</span><span class="dn">-0.23%</span></span>
+    <span><span class="sym">VIX</span><span class="val">13.42</span><span class="dn">-4.10%</span></span>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div id="header">
+  <div id="logo">
+    <button id="menu-btn" onclick="toggleSidebar()">☰</button>
+    <div id="logo-icon">JM</div>
+    <span id="logo-name">JM TradeVault</span>
+    <span id="pro-badge">PRO</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <div id="live-pill" onclick="loadData()">
+      <div id="live-dot"></div>
+      <span id="live-text">Loading...</span>
+    </div>
+    <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#1E3A5F,#1E2A45);display:flex;align-items:center;justify-content:center;font-size:12px;color:#94A3B8;border:1px solid #2D3F5E;cursor:pointer;" onclick="showAuth()">⚙</div>
+  </div>
+</div>
+
+<!-- BODY -->
+<div id="body">
+  <div id="sidebar">
+    <div class="views-label">VIEWS</div>
+    <button class="nav-btn active" style="--c:#10B981" onclick="setActive(this,'Overall Trades','ALL')">
+      <div class="nav-tag">AL</div><span class="nav-label">Overall Trades</span>
+    </button>
+    <button class="nav-btn" style="--c:#10B981" onclick="setActive(this,'Winning Trades','WIN')">
+      <div class="nav-tag">WI</div><span class="nav-label">Winning Trades</span>
+    </button>
+    <button class="nav-btn" style="--c:#F43F5E" onclick="setActive(this,'Losing Trades','LOSS')">
+      <div class="nav-tag">LO</div><span class="nav-label">Losing Trades</span>
+    </button>
+    <button class="nav-btn" style="--c:#3B82F6" onclick="setActive(this,'Yearly Trades','YR')">
+      <div class="nav-tag">YR</div><span class="nav-label">Yearly Trades</span>
+    </button>
+    <button class="nav-btn" style="--c:#F59E0B" onclick="setActive(this,'Strategy Performance','STR')">
+      <div class="nav-tag">ST</div><span class="nav-label">Strategy Performance</span>
+    </button>
+    <button class="nav-btn" style="--c:#06B6D4" onclick="setActive(this,'Monthly Trades','MO')">
+      <div class="nav-tag">MO</div><span class="nav-label">Monthly Trades</span>
+    </button>
+    <button class="nav-btn" style="--c:#F97316" onclick="setActive(this,'Heat Map View','MAP')">
+      <div class="nav-tag">MA</div><span class="nav-label">Heat Map View</span>
+    </button>
+    <button class="nav-btn" style="--c:#10B981" onclick="setActive(this,'Win Rate Dashboard','WR%')">
+      <div class="nav-tag">WR</div><span class="nav-label">Win Rate Dashboard</span>
+    </button>
+    <button class="nav-btn" style="--c:#8B5CF6" onclick="setActive(this,'Calendar View','CAL')">
+      <div class="nav-tag">CA</div><span class="nav-label">Calendar View</span>
+    </button>
+  </div>
+
+  <div id="main">
+    <div id="page-header">
+      <div>
+        <div id="page-eyebrow">ALL · DASHBOARD</div>
+        <div id="page-title">Overall Trades</div>
+      </div>
+      <div style="font-size:11px;color:#475569" id="last-updated">Ready to connect</div>
+    </div>
+
+    <div id="error-area"></div>
+    <div id="stats">
+      <div class="stat-card"><div class="stat-bar" style="background:linear-gradient(90deg,#10B981,transparent)"></div><div class="stat-lbl">NET P&L</div><div class="stat-val" style="color:#10B981" id="stat-pnl">—</div><div class="stat-sub" id="stat-pnl-sub">Loading...</div></div>
+      <div class="stat-card"><div class="stat-bar" style="background:linear-gradient(90deg,#3B82F6,transparent)"></div><div class="stat-lbl">WIN RATE</div><div class="stat-val" style="color:#3B82F6" id="stat-wr">—</div><div class="stat-sub" id="stat-wr-sub">Loading...</div></div>
+      <div class="stat-card"><div class="stat-bar" style="background:linear-gradient(90deg,#A78BFA,transparent)"></div><div class="stat-lbl">TOTAL TRADES</div><div class="stat-val" style="color:#A78BFA" id="stat-total">—</div><div class="stat-sub" id="stat-total-sub">Loading...</div></div>
+      <div class="stat-card"><div class="stat-bar" style="background:linear-gradient(90deg,#F59E0B,transparent)"></div><div class="stat-lbl">RULES FOLLOWED</div><div class="stat-val" style="color:#F59E0B" id="stat-rules">—</div><div class="stat-sub">Discipline Score</div></div>
+    </div>
+
+    <div id="charts-row">
+      <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><span style="font-size:12px;font-weight:600;color:#94A3B8">Monthly P&L</span><span style="font-size:10px;color:#334155">From your journal</span></div><div id="bar-chart"></div></div>
+      <div class="card" id="donut-card"><div style="font-size:12px;font-weight:600;color:#94A3B8;text-align:center;margin-bottom:14px">Win / Loss</div><div id="donut-wrap"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.9" fill="none" stroke="#F43F5E" stroke-width="3"/><circle id="donut-arc" cx="18" cy="18" r="15.9" fill="none" stroke="#10B981" stroke-width="3" stroke-dasharray="0 100" stroke-linecap="round"/></svg><div id="donut-label"><span id="donut-pct">—</span><span id="donut-txt">WIN RATE</span></div></div><div id="wl-row"><div class="wl-col"><div class="wl-num" style="color:#10B981" id="win-count">—</div><div class="wl-lbl">WINS</div></div><div style="width:1px;background:#1E2A45"></div><div class="wl-col"><div class="wl-num" style="color:#F43F5E" id="loss-count">—</div><div class="wl-lbl">LOSSES</div></div></div></div>
+    </div>
+
+    <div id="emotion-row">
+      <div class="emotion-card"><div class="emotion-emoji">😊</div><div class="emotion-count" id="em-calm">—</div><div class="emotion-lbl">CALM</div></div>
+      <div class="emotion-card"><div class="emotion-emoji">🏃</div><div class="emotion-count" id="em-fomo">—</div><div class="emotion-lbl">FOMO</div></div>
+      <div class="emotion-card"><div class="emotion-emoji">😨</div><div class="emotion-count" id="em-fear">—</div><div class="emotion-lbl">FEAR</div></div>
+      <div class="emotion-card"><div class="emotion-emoji">💰</div><div class="emotion-count" id="em-greed">—</div><div class="emotion-lbl">GREED</div></div>
+      <div class="emotion-card"><div class="emotion-emoji">🎯</div><div class="emotion-count" id="em-conf">—</div><div class="emotion-lbl">CONFIDENT</div></div>
+    </div>
+
+    <div id="table-card">
+      <div id="table-header">
+        <span>Recent Trades</span>
+        <button id="refresh-btn" onclick="loadData()">↻ Refresh</button>
+      </div>
+      <div id="table-body">
+        <div id="loading"><div class="spinner"></div> Click refresh or gear icon to connect...</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const DATABASE_ID = '2fb78309383380d49613dd5a8280d5fb';
+let NOTION_TOKEN = localStorage.getItem('notion_token') || '';
+
+function showAuth() {
+  document.getElementById('auth-modal').classList.remove('hidden');
+  document.getElementById('token-input').focus();
+}
+
+function saveToken() {
+  const token = document.getElementById('token-input').value.trim();
+  if (!token) {
+    alert('Please paste your Notion API token');
+    return;
+  }
+  NOTION_TOKEN = token;
+  localStorage.setItem('notion_token', token);
+  document.getElementById('auth-modal').classList.add('hidden');
+  loadData();
+}
+
+if (NOTION_TOKEN) {
+  document.getElementById('auth-modal').classList.add('hidden');
+  setTimeout(loadData, 500);
+} else {
+  showAuth();
+}
+
+async function fetchNotion(cursor = null) {
+  const body = { page_size: 100 };
+  if (cursor) body.start_cursor = cursor;
+  const url = `https://api.notion.com/v1/databases/${DATABASE_ID}/query`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${NOTION_TOKEN}`,
+      'Notion-Version': '2022-06-28',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+  return await res.json();
+}
+
+function getProp(props, name, type) {
+  const p = props[name];
+  if (!p) return null;
+  if (type === 'number') return p.number ?? p.formula?.number ?? null;
+  if (type === 'select') return p.select?.name ?? p.formula?.string ?? null;
+  if (type === 'multi_select') return p.multi_select?.map(s => s.name) ?? [];
+  if (type === 'date') return p.date?.start ?? null;
+  if (type === 'checkbox') return p.checkbox ?? null;
+  if (type === 'rich_text') return p.rich_text?.[0]?.plain_text ?? null;
+  if (type === 'title') return p.title?.[0]?.plain_text ?? null;
+  return null;
+}
+
+async function loadData() {
+  if (!NOTION_TOKEN) {
+    showAuth();
+    return;
+  }
+  document.getElementById('live-text').textContent = 'Syncing...';
+  document.getElementById('live-dot').className = '';
+  document.getElementById('error-area').innerHTML = '';
+
+  try {
+    const data = await fetchNotion();
+
+    if (data.object === 'error') {
+      throw new Error(data.message || 'Notion API error');
+    }
+
+    let allTrades = data.results || [];
+    let hasMore = data.has_more;
+    let cursor = data.next_cursor;
+    while (hasMore && allTrades.length < 500) {
+      const more = await fetchNotion(cursor);
+      allTrades = allTrades.concat(more.results || []);
+      hasMore = more.has_more;
+      cursor = more.next_cursor;
+    }
+
+    processAndRender(allTrades);
+    document.getElementById('live-dot').className = 'connected';
+    document.getElementById('live-text').textContent = 'Live';
+    document.getElementById('last-updated').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+
+  } catch (err) {
+    document.getElementById('live-text').textContent = 'Error';
+    document.getElementById('error-area').innerHTML = `<div class="error-msg">⚠️ Error: ${err.message}</div>`;
+    console.error(err);
+  }
+}
+
+function processAndRender(trades) {
+  let totalPnl = 0, wins = 0, losses = 0, rulesYes = 0, rulesTotal = 0;
+  let emotions = { calm: 0, fomo: 0, fear: 0, greed: 0, confident: 0 };
+  let monthlyPnl = {};
+
+  trades.forEach(t => {
+    const props = t.properties;
+    const pnl = getProp(props, 'NETP&L', 'number') ?? getProp(props, 'NET P&L', 'number') ?? getProp(props, 'P&L', 'number') ?? 0;
+    const result = getProp(props, 'RESULT', 'select') ?? getProp(props, 'Result', 'select') ?? '';
+    const rules = getProp(props, 'RULES FOLLOWED', 'select') ?? '';
+    const emotion = getProp(props, 'EMOTION TAG', 'select') ?? '';
+    const month = getProp(props, 'MONTH', 'formula') ?? getProp(props, 'Month', 'select') ?? '';
+
+    totalPnl += pnl || 0;
+    const isWin = result.includes('Win') || result.includes('Hit') || result === 'WIN';
+    const isLoss = result.includes('Loss') || result.includes('Out') || result === 'LOSS';
+    if (isWin) wins++;
+    if (isLoss) losses++;
+    if (rules === 'YES') rulesYes++;
+    if (rules === 'YES' || rules === 'NO') rulesTotal++;
+
+    const em = emotion.toLowerCase();
+    if (em.includes('calm')) emotions.calm++;
+    else if (em.includes('fomo')) emotions.fomo++;
+    else if (em.includes('fear')) emotions.fear++;
+    else if (em.includes('greed')) emotions.greed++;
+    else if (em.includes('confident')) emotions.confident++;
+
+    if (month) monthlyPnl[month] = (monthlyPnl[month] || 0) + (pnl || 0);
+  });
+
+  const total = trades.length;
+  const winRate = total > 0 ? ((wins / total) * 100).toFixed(1) : 0;
+  const rulesRate = rulesTotal > 0 ? ((rulesYes / rulesTotal) * 100).toFixed(0) : 0;
+
+  const pnlColor = totalPnl >= 0 ? '#10B981' : '#F43F5E';
+  document.getElementById('stat-pnl').style.color = pnlColor;
+  document.getElementById('stat-pnl').textContent = (totalPnl >= 0 ? '+' : '') + '₹' + totalPnl.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  document.getElementById('stat-pnl-sub').textContent = `${total} total trades`;
+  document.getElementById('stat-wr').textContent = winRate + '%';
+  document.getElementById('stat-wr-sub').textContent = `${wins} wins of ${total}`;
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-total-sub').textContent = `${wins}W / ${losses}L`;
+  document.getElementById('stat-rules').textContent = rulesRate + '%';
+
+  const wr = parseFloat(winRate);
+  document.getElementById('donut-pct').textContent = winRate + '%';
+  document.getElementById('donut-arc').setAttribute('stroke-dasharray', `${wr} ${100 - wr}`);
+  document.getElementById('win-count').textContent = wins;
+  document.getElementById('loss-count').textContent = losses;
+
+  document.getElementById('em-calm').textContent = emotions.calm;
+  document.getElementById('em-fomo').textContent = emotions.fomo;
+  document.getElementById('em-fear').textContent = emotions.fear;
+  document.getElementById('em-greed').textContent = emotions.greed;
+  document.getElementById('em-conf').textContent = emotions.confident;
+
+  const months = Object.keys(monthlyPnl).slice(-12);
+  const vals = months.map(m => monthlyPnl[m]);
+  const maxVal = Math.max(...vals.map(Math.abs), 1);
+  const bc = document.getElementById('bar-chart');
+  bc.innerHTML = '';
+  months.forEach((m, i) => {
+    const v = vals[i];
+    const h = Math.round((Math.abs(v) / maxVal) * 100);
+    const lbl = m.toString().slice(0, 3);
+    bc.innerHTML += `<div class="bar-col"><div class="bar" style="height:${Math.max(h,4)}%;background:${v>=0?'linear-gradient(180deg,#10B981,#059669)':'linear-gradient(180deg,#F43F5E,#BE123C)'};"></div><span class="bar-lbl">${lbl}</span></div>`;
+  });
+
+  const recent = trades.slice(0, 10);
+  let rows = '';
+  recent.forEach(t => {
+    const props = t.properties;
+    const sym = getProp(props, 'UNDERLYING', 'select') ?? getProp(props, 'Underlying', 'select') ?? 'N/A';
+    const strat = getProp(props, 'STRATEGY', 'select') ?? getProp(props, 'Strategy', 'select') ?? '—';
+    const result = getProp(props, 'RESULT', 'select') ?? '—';
+    const pnl = getProp(props, 'NETP&L', 'number') ?? getProp(props, 'NET P&L', 'number') ?? getProp(props, 'P&L', 'number') ?? 0;
+    const emotion = getProp(props, 'EMOTION TAG', 'select') ?? '—';
+    const isWin = result.includes('Win') || result.includes('Hit');
+    const isCE = strat.includes('CE');
+    rows += `<tr><td><span class="t-sym">${sym}</span></td><td><span class="badge ${isCE ? 'badge-ce' : 'badge-pe'}">${strat}</span></td><td><span class="${isWin ? 'result-win' : 'result-loss'}">${result}</span></td><td><span style="font-size:10px;color:#64748B">${emotion.split(' ')[0]}</span></td><td><span class="pnl ${pnl >= 0 ? 'win' : 'loss'}">${pnl >= 0 ? '+' : ''}₹${pnl.toFixed(0)}</span></td></tr>`;
+  });
+
+  document.getElementById('table-body').innerHTML = `<table><thead><tr><th>Symbol</th><th>Strategy</th><th>Result</th><th>Emotion</th><th>P&L</th></tr></thead><tbody>${rows || '<tr><td colspan="5" style="text-align:center;padding:20px;color:#475569">No trades found</td></tr>'}</tbody></table>`;
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('closed');
+}
+
+function setActive(btn, title, tag) {
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('page-eyebrow').textContent = tag + ' · DASHBOARD';
+  document.getElementById('page-title').textContent = title;
+}
+</script>
+</body>
+</html>
