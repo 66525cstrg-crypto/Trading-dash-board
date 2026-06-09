@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>TradeVault Pro</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #080D1A; color: #E2E8F0; font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+  /* TICKER */
+  #ticker-wrap { background: #0A0F1E; border-bottom: 1px solid #1E2A45; padding: 6px 0; overflow: hidden; flex-shrink: 0; }
+  #ticker { display: flex; gap: 40px; padding-left: 20px; white-space: nowrap; animation: scroll 22s linear infinite; }
+  #ticker span { font-size: 11px; letter-spacing: 0.04em; }
+  #ticker .sym { color: #64748B; margin-right: 6px; }
+  #ticker .val { color: #CBD5E1; font-family: monospace; margin-right: 6px; }
+  #ticker .up { color: #10B981; font-weight: 600; }
+  #ticker .dn { color: #F43F5E; font-weight: 600; }
+  @keyframes scroll { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+
+  /* HEADER */
+  #header { display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; background: #0A0F1E; border-bottom: 1px solid #1E2A45; flex-shrink: 0; }
+  #logo { display: flex; align-items: center; gap: 12px; }
+  #logo-icon { width: 28px; height: 28px; border-radius: 6px; background: linear-gradient(135deg,#3B82F6,#8B5CF6); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: #fff; }
+  #logo-name { font-size: 15px; font-weight: 700; color: #F1F5F9; letter-spacing: -0.01em; }
+  #pro-badge { font-size: 9px; font-weight: 600; letter-spacing: 0.08em; color: #3B82F6; border: 1px solid #1E3A5F; border-radius: 3px; padding: 1px 5px; background: #0D1E35; }
+  #live-pill { display: flex; align-items: center; gap: 6px; background: #0F1829; border: 1px solid #1E2A45; border-radius: 6px; padding: 5px 10px; }
+  #live-dot { width: 6px; height: 6px; border-radius: 50%; background: #10B981; box-shadow: 0 0 6px #10B981; }
+  #live-pill span { font-size: 11px; color: #94A3B8; }
+  #menu-btn { background: none; border: none; color: #64748B; cursor: pointer; font-size: 18px; padding: 4px; }
+
+  /* BODY */
+  #body { display: flex; flex: 1; overflow: hidden; }
+
+  /* SIDEBAR */
+  #sidebar { width: 220px; flex-shrink: 0; background: #0A0F1E; border-right: 1px solid #1E2A45; display: flex; flex-direction: column; padding: 16px 0; overflow-y: auto; transition: width 0.2s; }
+  #sidebar.closed { width: 0; padding: 0; overflow: hidden; }
+  .views-label { padding: 0 12px 12px; font-size: 9px; font-weight: 700; letter-spacing: 0.12em; color: #334155; }
+  .nav-btn { display: flex; align-items: center; gap: 10px; padding: 9px 16px; background: transparent; border: none; border-left: 2px solid transparent; cursor: pointer; text-align: left; width: 100%; transition: all 0.15s; }
+  .nav-btn.active { background: #111827; border-left-color: var(--c); }
+  .nav-tag { width: 28px; height: 28px; border-radius: 6px; background: #111827; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; flex-shrink: 0; border: 1px solid #1E2A45; color: #475569; }
+  .nav-btn.active .nav-tag { background: color-mix(in srgb, var(--c) 13%, transparent); border-color: color-mix(in srgb, var(--c) 27%, transparent); color: var(--c); }
+  .nav-label { font-size: 12px; color: #64748B; font-weight: 400; letter-spacing: 0.01em; }
+  .nav-btn.active .nav-label { color: #F1F5F9; font-weight: 600; }
+  #new-view-btn { margin: auto 16px 0; padding: 8px; border-radius: 7px; background: linear-gradient(135deg,#1E3A5F,#1E2040); border: 1px dashed #2D4A7A; color: #3B82F6; font-size: 11px; font-weight: 600; cursor: pointer; width: calc(100% - 32px); margin-top: 12px; }
+
+  /* MAIN */
+  #main { flex: 1; overflow: auto; padding: 20px 24px; }
+  #page-header { margin-bottom: 20px; display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+  #page-eyebrow { font-size: 11px; color: #334155; letter-spacing: 0.1em; font-weight: 600; margin-bottom: 4px; }
+  #page-title { font-size: 22px; font-weight: 700; color: #F1F5F9; letter-spacing: -0.02em; }
+  #timeframe { display: flex; gap: 8px; }
+  .tf-btn { padding: 5px 10px; border-radius: 5px; font-size: 11px; font-weight: 600; background: transparent; color: #475569; border: 1px solid #1E2A45; cursor: pointer; }
+  .tf-btn.active { background: #1E3A5F; color: #3B82F6; border-color: #2D4A7A; }
+
+  /* STAT CARDS */
+  #stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 20px; }
+  .stat-card { background: #0D1424; border: 1px solid #1E2A45; border-radius: 10px; padding: 16px; position: relative; overflow: hidden; }
+  .stat-bar { position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+  .stat-lbl { font-size: 10px; color: #475569; letter-spacing: 0.08em; font-weight: 600; margin-bottom: 8px; }
+  .stat-val { font-size: 22px; font-weight: 700; font-family: monospace; letter-spacing: -0.02em; margin-bottom: 4px; }
+  .stat-sub { font-size: 10px; color: #475569; }
+
+  /* CHARTS ROW */
+  #charts-row { display: grid; grid-template-columns: 1fr 220px; gap: 12px; margin-bottom: 20px; }
+  .card { background: #0D1424; border: 1px solid #1E2A45; border-radius: 10px; padding: 16px; }
+  .card-title { font-size: 12px; font-weight: 600; color: #94A3B8; margin-bottom: 16px; }
+  .card-sub { font-size: 10px; color: #334155; }
+
+  /* BAR CHART */
+  #bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 80px; }
+  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; height: 100%; justify-content: flex-end; }
+  .bar { width: 100%; border-radius: 3px 3px 0 0; }
+  .bar-lbl { font-size: 8px; color: #334155; }
+
+  /* DONUT */
+  #donut-card { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  #donut-wrap { position: relative; width: 90px; height: 90px; }
+  #donut-wrap svg { transform: rotate(-90deg); width: 90px; height: 90px; }
+  #donut-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  #donut-pct { font-size: 18px; font-weight: 700; color: #10B981; line-height: 1; font-family: monospace; }
+  #donut-txt { font-size: 8px; color: #475569; margin-top: 2px; }
+  #wl-row { display: flex; gap: 12px; margin-top: 12px; }
+  .wl-col { text-align: center; }
+  .wl-num { font-size: 13px; font-weight: 700; font-family: monospace; }
+  .wl-lbl { font-size: 8px; color: #475569; }
+  #wl-div { width: 1px; background: #1E2A45; }
+
+  /* TABLE */
+  #table-card { background: #0D1424; border: 1px solid #1E2A45; border-radius: 10px; overflow: hidden; }
+  #table-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border-bottom: 1px solid #1E2A45; }
+  #table-header span:first-child { font-size: 12px; font-weight: 600; color: #94A3B8; }
+  #table-header span:last-child { font-size: 10px; color: #3B82F6; cursor: pointer; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { padding: 8px 16px; text-align: left; font-size: 9px; font-weight: 700; letter-spacing: 0.08em; color: #334155; border-bottom: 1px solid #1E2A45; }
+  tbody tr { border-bottom: 1px solid #111827; }
+  tbody td { padding: 10px 16px; }
+  .t-sym { font-size: 12px; font-weight: 700; color: #E2E8F0; font-family: monospace; }
+  .badge { font-size: 9px; font-weight: 700; letter-spacing: 0.06em; border-radius: 3px; padding: 2px 6px; }
+  .badge.long { color: #10B981; background: #10B98122; border: 1px solid #10B98144; }
+  .badge.short { color: #F43F5E; background: #F43F5E22; border: 1px solid #F43F5E44; }
+  .t-price { font-size: 11px; color: #64748B; font-family: monospace; }
+  .strat-tag { font-size: 9px; color: #94A3B8; background: #111827; border: 1px solid #1E2A45; border-radius: 3px; padding: 2px 6px; }
+  .pnl { font-size: 12px; font-weight: 700; font-family: monospace; }
+  .pnl.win { color: #10B981; }
+  .pnl.loss { color: #F43F5E; }
+</style>
+</head>
+<body>
+
+<!-- TICKER -->
+<div id="ticker-wrap">
+  <div id="ticker">
+    <span><span class="sym">NIFTY 50</span><span class="val">24,892.15</span><span class="up">+0.84%</span></span>
+    <span><span class="sym">BANK NIFTY</span><span class="val">51,340.70</span><span class="up">+1.12%</span></span>
+    <span><span class="sym">SENSEX</span><span class="val">81,450.30</span><span class="up">+0.76%</span></span>
+    <span><span class="sym">MIDCAP 150</span><span class="val">18,204.45</span><span class="dn">-0.23%</span></span>
+    <span><span class="sym">VIX</span><span class="val">13.42</span><span class="dn">-4.10%</span></span>
+    <span><span class="sym">NIFTY 50</span><span class="val">24,892.15</span><span class="up">+0.84%</span></span>
+    <span><span class="sym">BANK NIFTY</span><span class="val">51,340.70</span><span class="up">+1.12%</span></span>
+    <span><span class="sym">SENSEX</span><span class="val">81,450.30</span><span class="up">+0.76%</span></span>
+    <span><span class="sym">MIDCAP 150</span><span class="val">18,204.45</span><span class="dn">-0.23%</span></span>
+    <span><span class="sym">VIX</span><span class="val">13.42</span><span class="dn">-4.10%</span></span>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div id="header">
+  <div id="logo">
+    <button id="menu-btn" onclick="toggleSidebar()">☰</button>
+    <div id="logo-icon">T</div>
+    <span id="logo-name">TradeVault</span>
+    <span id="pro-badge">PRO</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <div id="live-pill"><div id="live-dot"></div><span>Live</span></div>
+    <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#1E3A5F,#1E2A45);display:flex;align-items:center;justify-content:center;font-size:12px;color:#94A3B8;border:1px solid #2D3F5E;cursor:pointer">⚙</div>
+  </div>
+</div>
+
+<!-- BODY -->
+<div id="body">
+
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div class="views-label">VIEWS</div>
+    <button class="nav-btn" style="--c:#10B981" data-id="winning" onclick="setActive(this)">
+      <div class="nav-tag">WI</div><span class="nav-label">Winning Trades</span>
+    </button>
+    <button class="nav-btn" style="--c:#F43F5E" data-id="losing" onclick="setActive(this)">
+      <div class="nav-tag">LO</div><span class="nav-label">Losing Trades</span>
+    </button>
+    <button class="nav-btn" style="--c:#3B82F6" data-id="yearly" onclick="setActive(this)">
+      <div class="nav-tag">YR</div><span class="nav-label">Yearly Trades</span>
+    </button>
+    <button class="nav-btn active" style="--c:#A78BFA" data-id="overall" onclick="setActive(this)">
+      <div class="nav-tag">AL</div><span class="nav-label">Overall Trades</span>
+    </button>
+    <button class="nav-btn" style="--c:#F59E0B" data-id="strategy" onclick="setActive(this)">
+      <div class="nav-tag">ST</div><span class="nav-label">Strategy Performance</span>
+    </button>
+    <button class="nav-btn" style="--c:#06B6D4" data-id="monthly" onclick="setActive(this)">
+      <div class="nav-tag">MO</div><span class="nav-label">Monthly Trades</span>
+    </button>
+    <button class="nav-btn" style="--c:#F97316" data-id="heatmap" onclick="setActive(this)">
+      <div class="nav-tag">MA</div><span class="nav-label">Heat Map View</span>
+    </button>
+    <button class="nav-btn" style="--c:#10B981" data-id="winrate" onclick="setActive(this)">
+      <div class="nav-tag">WR</div><span class="nav-label">Win Rate Dashboard</span>
+    </button>
+    <button class="nav-btn" style="--c:#8B5CF6" data-id="calendar" onclick="setActive(this)">
+      <div class="nav-tag">CA</div><span class="nav-label">Calendar View</span>
+    </button>
+    <button id="new-view-btn">+ New View</button>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main">
+
+    <!-- PAGE HEADER -->
+    <div id="page-header">
+      <div>
+        <div id="page-eyebrow">ALL · DASHBOARD</div>
+        <div id="page-title">Overall Trades</div>
+      </div>
+      <div id="timeframe">
+        <button class="tf-btn">1W</button>
+        <button class="tf-btn active">1M</button>
+        <button class="tf-btn">3M</button>
+        <button class="tf-btn">1Y</button>
+        <button class="tf-btn">ALL</button>
+      </div>
+    </div>
+
+    <!-- STAT CARDS -->
+    <div id="stats">
+      <div class="stat-card">
+        <div class="stat-bar" style="background:linear-gradient(90deg,#10B981,transparent)"></div>
+        <div class="stat-lbl">NET P&L</div>
+        <div class="stat-val" style="color:#10B981">+$24,830</div>
+        <div class="stat-sub">↑ 12.4% this month</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-bar" style="background:linear-gradient(90deg,#3B82F6,transparent)"></div>
+        <div class="stat-lbl">WIN RATE</div>
+        <div class="stat-val" style="color:#3B82F6">67.3%</div>
+        <div class="stat-sub">↑ 2.1% vs last month</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-bar" style="background:linear-gradient(90deg,#A78BFA,transparent)"></div>
+        <div class="stat-lbl">TOTAL TRADES</div>
+        <div class="stat-val" style="color:#A78BFA">348</div>
+        <div class="stat-sub">28 this week</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-bar" style="background:linear-gradient(90deg,#F59E0B,transparent)"></div>
+        <div class="stat-lbl">AVG. RRR</div>
+        <div class="stat-val" style="color:#F59E0B">1 : 2.4</div>
+        <div class="stat-sub">Risk-Reward Ratio</div>
+      </div>
+    </div>
+
+    <!-- CHARTS ROW -->
+    <div id="charts-row">
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <span class="card-title" style="margin-bottom:0">Monthly P&L</span>
+          <span class="card-sub">FY 2025–26</span>
+        </div>
+        <div id="bar-chart">
+          <!-- bars injected by JS -->
+        </div>
+      </div>
+      <div class="card" id="donut-card">
+        <div class="card-title" style="text-align:center">Win / Loss</div>
+        <div id="donut-wrap">
+          <svg viewBox="0 0 36 36">
+            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#F43F5E" stroke-width="3"/>
+            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#10B981" stroke-width="3"
+              stroke-dasharray="67.3 32.7" stroke-linecap="round"/>
+          </svg>
+          <div id="donut-label">
+            <span id="donut-pct">67%</span>
+            <span id="donut-txt">WIN RATE</span>
+          </div>
+        </div>
+        <div id="wl-row">
+          <div class="wl-col"><div class="wl-num" style="color:#10B981">234</div><div class="wl-lbl">WINS</div></div>
+          <div id="wl-div"></div>
+          <div class="wl-col"><div class="wl-num" style="color:#F43F5E">114</div><div class="wl-lbl">LOSSES</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RECENT TRADES TABLE -->
+    <div id="table-card">
+      <div id="table-header">
+        <span>Recent Trades</span>
+        <span>View All →</span>
+      </div>
+      <table>
+        <thead>
+          <tr><th>Symbol</th><th>Type</th><th>Entry</th><th>Exit</th><th>Strategy</th><th>P&L</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="t-sym">NIFTY</span></td>
+            <td><span class="badge long">LONG</span></td>
+            <td><span class="t-price">24,150</span></td>
+            <td><span class="t-price">24,380</span></td>
+            <td><span class="strat-tag">Breakout</span></td>
+            <td><span class="pnl win">+₹2,300</span></td>
+          </tr>
+          <tr>
+            <td><span class="t-sym">BANKNIFTY</span></td>
+            <td><span class="badge short">SHORT</span></td>
+            <td><span class="t-price">51,200</span></td>
+            <td><span class="t-price">50,850</span></td>
+            <td><span class="strat-tag">Reversal</span></td>
+            <td><span class="pnl win">+₹3,500</span></td>
+          </tr>
+          <tr>
+            <td><span class="t-sym">RELIANCE</span></td>
+            <td><span class="badge long">LONG</span></td>
+            <td><span class="t-price">2,940</span></td>
+            <td><span class="t-price">2,910</span></td>
+            <td><span class="strat-tag">Trend Follow</span></td>
+            <td><span class="pnl loss">-₹900</span></td>
+          </tr>
+          <tr>
+            <td><span class="t-sym">HDFC</span></td>
+            <td><span class="badge long">LONG</span></td>
+            <td><span class="t-price">1,720</span></td>
+            <td><span class="t-price">1,755</span></td>
+            <td><span class="strat-tag">Breakout</span></td>
+            <td><span class="pnl win">+₹1,050</span></td>
+          </tr>
+          <tr>
+            <td><span class="t-sym">INFY</span></td>
+            <td><span class="badge short">SHORT</span></td>
+            <td><span class="t-price">1,590</span></td>
+            <td><span class="t-price">1,612</span></td>
+            <td><span class="strat-tag">Mean Revert</span></td>
+            <td><span class="pnl loss">-₹660</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /body -->
+
+<script>
+  // Build bar chart
+  const bars = [62,45,78,55,90,40,85,70,60,95,50,88];
+  const months = ["J","F","M","A","M","J","J","A","S","O","N","D"];
+  const bc = document.getElementById('bar-chart');
+  bars.forEach((h, i) => {
+    bc.innerHTML += `<div class="bar-col">
+      <div class="bar" style="height:${h}%;background:${h>60?'linear-gradient(180deg,#10B981,#059669)':'linear-gradient(180deg,#F43F5E,#BE123C)'};opacity:${i===10?0.4:1}"></div>
+      <span class="bar-lbl">${months[i]}</span>
+    </div>`;
+  });
+
+  // Sidebar toggle
+  function toggleSidebar() {
+    document.getElementById('sidebar').classList.toggle('closed');
+  }
+
+  // Nav active state
+  const labels = {
+    winning: ["WIN","Winning Trades"],
+    losing: ["LOSS","Losing Trades"],
+    yearly: ["YR","Yearly Trades"],
+    overall: ["ALL","Overall Trades"],
+    strategy: ["STR","Strategy Performance"],
+    monthly: ["MO","Monthly Trades"],
+    heatmap: ["MAP","Heat Map View"],
+    winrate: ["WR%","Win Rate Dashboard"],
+    calendar: ["CAL","Calendar View"],
+  };
+  function setActive(btn) {
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const id = btn.getAttribute('data-id');
+    document.getElementById('page-eyebrow').textContent = labels[id][0] + ' · DASHBOARD';
+    document.getElementById('page-title').textContent = labels[id][1];
+  }
+
+  // Timeframe buttons
+  document.querySelectorAll('.tf-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>
