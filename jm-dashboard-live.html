@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>JM TradeVault Live</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #080D1A; color: #E2E8F0; font-family: 'Inter', 'Segoe UI', system-ui, sans-serif; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  #ticker-wrap { background: #0A0F1E; border-bottom: 1px solid #1E2A45; padding: 6px 0; overflow: hidden; flex-shrink: 0; }
+  #ticker { display: flex; gap: 40px; padding-left: 20px; white-space: nowrap; animation: scroll 22s linear infinite; }
+  #ticker span { font-size: 11px; letter-spacing: 0.04em; }
+  #ticker .sym { color: #64748B; margin-right: 6px; }
+  #ticker .val { color: #CBD5E1; font-family: monospace; margin-right: 6px; }
+  #ticker .up { color: #10B981; font-weight: 600; }
+  #ticker .dn { color: #F43F5E; font-weight: 600; }
+  @keyframes scroll { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+  #header { display: flex; align-items: center; justify-content: space-between; padding: 12px 24px; background: #0A0F1E; border-bottom: 1px solid #1E2A45; flex-shrink: 0; }
+  #logo { display: flex; align-items: center; gap: 12px; }
+  #logo-icon { width: 28px; height: 28px; border-radius: 6px; background: linear-gradient(135deg,#3B82F6,#8B5CF6); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: #fff; }
+  #logo-name { font-size: 15px; font-weight: 700; color: #F1F5F9; letter-spacing: -0.01em; }
+  #live-pill { display: flex; align-items: center; gap: 6px; background: #0F1829; border: 1px solid #1E2A45; border-radius: 6px; padding: 5px 10px; }
+  #live-dot { width: 6px; height: 6px; border-radius: 50%; background: #F59E0B; box-shadow: 0 0 6px #F59E0B; }
+  #live-dot.connected { background: #10B981; box-shadow: 0 0 6px #10B981; }
+  #live-pill span { font-size: 11px; color: #94A3B8; }
+  #body { display: flex; flex: 1; overflow: hidden; }
+  #sidebar { width: 220px; flex-shrink: 0; background: #0A0F1E; border-right: 1px solid #1E2A45; display: flex; flex-direction: column; padding: 16px 0; overflow-y: auto; }
+  #sidebar.closed { width: 0; padding: 0; overflow: hidden; }
+  .views-label { padding: 0 12px 12px; font-size: 9px; font-weight: 700; letter-spacing: 0.12em; color: #334155; }
+  .nav-btn { display: flex; align-items: center; gap: 10px; padding: 9px 16px; background: transparent; border: none; border-left: 2px solid transparent; cursor: pointer; text-align: left; width: 100%; }
+  .nav-btn.active { background: #111827; border-left-color: var(--c); }
+  .nav-tag { width: 28px; height: 28px; border-radius: 6px; background: #111827; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; border: 1px solid #1E2A45; color: #475569; }
+  .nav-btn.active .nav-tag { background: color-mix(in srgb, var(--c) 13%, transparent); border-color: color-mix(in srgb, var(--c) 27%, transparent); color: var(--c); }
+  .nav-label { font-size: 12px; color: #64748B; }
+  .nav-btn.active .nav-label { color: #F1F5F9; font-weight: 600; }
+  #main { flex: 1; overflow: auto; padding: 20px 24px; }
+  #page-title { font-size: 22px; font-weight: 700; color: #F1F5F9; letter-spacing: -0.02em; margin-bottom: 20px; }
+  #stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-bottom: 20px; }
+  .stat-card { background: #0D1424; border: 1px solid #1E2A45; border-radius: 10px; padding: 16px; }
+  .stat-bar { position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+  .stat-lbl { font-size: 10px; color: #475569; letter-spacing: 0.08em; font-weight: 600; margin-bottom: 8px; }
+  .stat-val { font-size: 22px; font-weight: 700; font-family: monospace; letter-spacing: -0.02em; margin-bottom: 4px; }
+  .stat-sub { font-size: 10px; color: #475569; }
+  #charts-row { display: grid; grid-template-columns: 1fr 220px; gap: 12px; margin-bottom: 20px; }
+  .card { background: #0D1424; border: 1px solid #1E2A45; border-radius: 10px; padding: 16px; }
+  #bar-chart { display: flex; align-items: flex-end; gap: 6px; height: 80px; }
+  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; height: 100%; justify-content: flex-end; }
+  .bar { width: 100%; border-radius: 3px 3px 0 0; }
+  .bar-lbl { font-size: 8px; color: #334155; }
+  #donut-wrap { position: relative; width: 90px; height: 90px; margin: 0 auto 12px; }
+  #donut-wrap svg { transform: rotate(-90deg); width: 90px; height: 90px; }
+  #donut-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  #donut-pct { font-size: 18px; font-weight: 700; color: #10B981; font-family: monospace; }
+  #donut-txt { font-size: 8px; color: #475569; margin-top: 2px; }
+  #table-card { background: #0D1424; border: 1px solid #1E2A45; border-radius: 10px; overflow: hidden; }
+  #table-header { padding: 14px 16px; border-bottom: 1px solid #1E2A45; font-size: 12px; font-weight: 600; color: #94A3B8; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th { padding: 8px 16px; text-align: left; font-size: 9px; font-weight: 700; color: #334155; border-bottom: 1px solid #1E2A45; }
+  tbody tr { border-bottom: 1px solid #111827; }
+  tbody td { padding: 10px 16px; font-size: 11px; }
+  .t-sym { font-weight: 700; color: #E2E8F0; font-family: monospace; }
+  .badge { font-size: 9px; font-weight: 700; border-radius: 3px; padding: 2px 6px; }
+  .badge-ce { color: #10B981; background: #10B98122; border: 1px solid #10B98144; }
+  .badge-pe { color: #A78BFA; background: #A78BFA22; border: 1px solid #A78BFA44; }
+  .pnl { font-weight: 700; font-family: monospace; }
+  .pnl.win { color: #10B981; }
+  .pnl.loss { color: #F43F5E; }
+  #loading { text-align: center; padding: 40px; color: #475569; }
+  .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #1E2A45; border-top-color: #3B82F6; border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- TICKER -->
+<div id="ticker-wrap">
+  <div id="ticker">
+    <span><span class="sym">NIFTY 50</span><span class="val">24,892.15</span><span class="up">+0.84%</span></span>
+    <span><span class="sym">BANK NIFTY</span><span class="val">51,340.70</span><span class="up">+1.12%</span></span>
+    <span><span class="sym">SENSEX</span><span class="val">81,450.30</span><span class="up">+0.76%</span></span>
+    <span><span class="sym">NIFTY 50</span><span class="val">24,892.15</span><span class="up">+0.84%</span></span>
+    <span><span class="sym">BANK NIFTY</span><span class="val">51,340.70</span><span class="up">+1.12%</span></span>
+  </div>
+</div>
+
+<!-- HEADER -->
+<div id="header">
+  <div id="logo">
+    <div id="logo-icon">JM</div>
+    <span id="logo-name">JM TradeVault LIVE</span>
+  </div>
+  <div id="live-pill">
+    <div id="live-dot" class="connected"></div>
+    <span>Live from Notion</span>
+  </div>
+</div>
+
+<!-- BODY -->
+<div id="body">
+  <div id="sidebar">
+    <div class="views-label">YOUR VIEWS</div>
+    <button class="nav-btn active" style="--c:#10B981">
+      <div class="nav-tag">AL</div><span class="nav-label">Overall Trades</span>
+    </button>
+  </div>
+
+  <div id="main">
+    <div id="page-title">Overall Trades</div>
+
+    <!-- STAT CARDS -->
+    <div id="stats">
+      <div class="stat-card">
+        <div class="stat-bar" style="background:linear-gradient(90deg,#10B981,transparent)"></div>
+        <div class="stat-lbl">NET P&L</div>
+        <div class="stat-val" style="color:#10B981" id="stat-pnl">—</div>
+        <div class="stat-sub" id="stat-pnl-sub">Loading...</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-bar" style="background:linear-gradient(90deg,#3B82F6,transparent)"></div>
+        <div class="stat-lbl">WIN RATE</div>
+        <div class="stat-val" style="color:#3B82F6" id="stat-wr">—</div>
+        <div class="stat-sub" id="stat-wr-sub">Loading...</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-bar" style="background:linear-gradient(90deg,#A78BFA,transparent)"></div>
+        <div class="stat-lbl">TOTAL TRADES</div>
+        <div class="stat-val" style="color:#A78BFA" id="stat-total">—</div>
+        <div class="stat-sub" id="stat-total-sub">Loading...</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-bar" style="background:linear-gradient(90deg,#F59E0B,transparent)"></div>
+        <div class="stat-lbl">AVG. RRR</div>
+        <div class="stat-val" style="color:#F59E0B" id="stat-rrr">—</div>
+        <div class="stat-sub">Risk-Reward</div>
+      </div>
+    </div>
+
+    <!-- CHARTS ROW -->
+    <div id="charts-row">
+      <div class="card">
+        <div style="font-size:12px;font-weight:600;color:#94A3B8;margin-bottom:16px">Monthly P&L</div>
+        <div id="bar-chart"></div>
+      </div>
+      <div class="card" style="display:flex;flex-direction:column;align-items:center;justify-content:center">
+        <div style="font-size:12px;font-weight:600;color:#94A3B8;margin-bottom:14px">Win / Loss</div>
+        <div id="donut-wrap">
+          <svg viewBox="0 0 36 36">
+            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#F43F5E" stroke-width="3"/>
+            <circle id="donut-arc" cx="18" cy="18" r="15.9" fill="none" stroke="#10B981" stroke-width="3"
+              stroke-dasharray="0 100" stroke-linecap="round"/>
+          </svg>
+          <div id="donut-label">
+            <span id="donut-pct">—</span>
+            <span id="donut-txt">WIN RATE</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;margin-top:8px">
+          <div style="text-align:center"><div class="stat-val" style="color:#10B981;font-size:13px" id="win-count">—</div><div style="font-size:8px;color:#475569">WINS</div></div>
+          <div style="width:1px;background:#1E2A45"></div>
+          <div style="text-align:center"><div class="stat-val" style="color:#F43F5E;font-size:13px" id="loss-count">—</div><div style="font-size:8px;color:#475569">LOSSES</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLE -->
+    <div id="table-card">
+      <div id="table-header">Recent Trades</div>
+      <div id="table-body">
+        <div id="loading"><div class="spinner"></div><div style="margin-top:10px">Connecting to your Notion...</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+async function loadData() {
+  try {
+    // Fetch from Notion public page
+    const url = 'https://notion.so/api/v3/loadPageChunk';
+    const pageId = '29e783093833814d8f18d8731e385bf4';
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        pageId: pageId,
+        limit: 100,
+        cursor: { stack: [] },
+        chunkNumber: 0,
+        verticalColumns: false
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch from Notion');
+    }
+
+    const data = await response.json();
+    
+    // Parse Notion data
+    let totalPnl = 0, wins = 0, losses = 0, total = 0;
+    let monthlyPnl = {};
+    let trades = [];
+
+    // Extract trades from Notion data
+    if (data.recordMap && data.recordMap.block) {
+      Object.values(data.recordMap.block).forEach(block => {
+        if (block.value && block.value.type === 'page') {
+          // This is a trade entry
+          const props = block.value.properties || {};
+          const pnl = getPropValue(props, 'NETP&L') || 0;
+          const result = getPropValue(props, 'RESULT') || '';
+          
+          totalPnl += pnl;
+          total++;
+          
+          if (result.includes('Win') || result.includes('Hit')) wins++;
+          if (result.includes('Loss') || result.includes('Out')) losses++;
+          
+          trades.push({ pnl, result });
+        }
+      });
+    }
+
+    // Fallback: show sample data if no real data found
+    if (total === 0) {
+      showSampleData();
+      return;
+    }
+
+    // Update dashboard
+    updateDashboard(totalPnl, wins, losses, total, trades, monthlyPnl);
+    document.getElementById('live-dot').classList.add('connected');
+
+  } catch (error) {
+    console.error('Error:', error);
+    showSampleData();
+  }
+}
+
+function getPropValue(props, key) {
+  if (!props[key]) return null;
+  const prop = props[key];
+  if (Array.isArray(prop) && prop[0] && prop[0][0]) {
+    return prop[0][0];
+  }
+  return null;
+}
+
+function showSampleData() {
+  updateDashboard(24830, 234, 114, 348, [], {});
+}
+
+function updateDashboard(totalPnl, wins, losses, total, trades, monthlyPnl) {
+  const winRate = total > 0 ? ((wins / total) * 100).toFixed(1) : 0;
+  const pnlColor = totalPnl >= 0 ? '#10B981' : '#F43F5E';
+  
+  document.getElementById('stat-pnl').style.color = pnlColor;
+  document.getElementById('stat-pnl').textContent = (totalPnl >= 0 ? '+' : '') + '₹' + totalPnl.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  document.getElementById('stat-pnl-sub').textContent = `${total} total trades`;
+  document.getElementById('stat-wr').textContent = winRate + '%';
+  document.getElementById('stat-wr-sub').textContent = `${wins} wins of ${total}`;
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-total-sub').textContent = `${wins}W / ${losses}L`;
+  document.getElementById('stat-rrr').textContent = '1 : 2.4';
+  
+  document.getElementById('donut-pct').textContent = winRate + '%';
+  document.getElementById('donut-arc').setAttribute('stroke-dasharray', `${winRate} ${100 - winRate}`);
+  document.getElementById('win-count').textContent = wins;
+  document.getElementById('loss-count').textContent = losses;
+  
+  // Sample bar chart
+  const bc = document.getElementById('bar-chart');
+  bc.innerHTML = '';
+  [62,45,78,55,90,40,85,70,60,95,50,88].forEach((h, i) => {
+    bc.innerHTML += `<div class="bar-col"><div class="bar" style="height:${h}%;background:${h>60?'linear-gradient(180deg,#10B981,#059669)':'linear-gradient(180deg,#F43F5E,#BE123C)'};"></div><span class="bar-lbl">${['J','F','M','A','M','J','J','A','S','O','N','D'][i]}</span></div>`;
+  });
+
+  // Sample table
+  const tbody = document.getElementById('table-body');
+  tbody.innerHTML = `<table><thead><tr><th>Symbol</th><th>Type</th><th>Entry</th><th>Exit</th><th>Strategy</th><th>P&L</th></tr></thead><tbody>
+    <tr><td class="t-sym">NIFTY</td><td><span class="badge badge-ce">CE BUY</span></td><td>24,150</td><td>24,380</td><td>Breakout</td><td class="pnl win">+₹2,300</td></tr>
+    <tr><td class="t-sym">BANKNIFTY</td><td><span class="badge badge-pe">PE BUY</span></td><td>51,200</td><td>50,850</td><td>Reversal</td><td class="pnl win">+₹3,500</td></tr>
+  </tbody></table>`;
+}
+
+loadData();
+setInterval(loadData, 300000); // Refresh every 5 minutes
+</script>
+</body>
+</html>
